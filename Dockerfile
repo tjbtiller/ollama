@@ -33,7 +33,7 @@ ENV LDFLAGS=-s
 FROM base AS cpu
 RUN dnf install -y gcc-toolset-11-gcc gcc-toolset-11-gcc-c++
 ENV PATH=/opt/rh/gcc-toolset-11/root/usr/bin:$PATH
-RUN --mount=type=cache,target=/root/.ccache \
+RUN --mount=type=cache,id=ccache-cpu,target=/root/.ccache \
     cmake --preset 'CPU' \
         && cmake --build --parallel --preset 'CPU' \
         && cmake --install build --component CPU --strip --parallel 8
@@ -42,7 +42,7 @@ FROM base AS cuda-11
 ARG CUDA11VERSION=11.3
 RUN dnf install -y cuda-toolkit-${CUDA11VERSION//./-}
 ENV PATH=/usr/local/cuda-11/bin:$PATH
-RUN --mount=type=cache,target=/root/.ccache \
+RUN --mount=type=cache,id=ccache-cuda11,target=/root/.ccache \
     cmake --preset 'CUDA 11' \
         && cmake --build --parallel --preset 'CUDA 11' \
         && cmake --install build --component CUDA --strip --parallel 8
@@ -51,14 +51,14 @@ FROM base AS cuda-12
 ARG CUDA12VERSION=12.8
 RUN dnf install -y cuda-toolkit-${CUDA12VERSION//./-}
 ENV PATH=/usr/local/cuda-12/bin:$PATH
-RUN --mount=type=cache,target=/root/.ccache \
+RUN --mount=type=cache,id=ccache-cuda12,target=/root/.ccache \
     cmake --preset 'CUDA 12' \
         && cmake --build --parallel --preset 'CUDA 12' \
         && cmake --install build --component CUDA --strip --parallel 8
 
 FROM base AS rocm-6
 ENV PATH=/opt/rocm/hcc/bin:/opt/rocm/hip/bin:/opt/rocm/bin:/opt/rocm/hcc/bin:$PATH
-RUN --mount=type=cache,target=/root/.ccache \
+RUN --mount=type=cache,id=ccache-rocm6,target=/root/.ccache \
     cmake --preset 'ROCm 6' \
         && cmake --build --parallel --preset 'ROCm 6' \
         && cmake --install build --component HIP --strip --parallel 8
@@ -69,7 +69,7 @@ RUN apt-get update && apt-get install -y curl ccache \
     && curl -fsSL https://github.com/Kitware/CMake/releases/download/v${CMAKEVERSION}/cmake-${CMAKEVERSION}-linux-$(uname -m).tar.gz | tar xz -C /usr/local --strip-components 1
 COPY CMakeLists.txt CMakePresets.json .
 COPY ml/backend/ggml/ggml ml/backend/ggml/ggml
-RUN --mount=type=cache,target=/root/.ccache \
+RUN --mount=type=cache,id=ccache-jetpack5,target=/root/.ccache \
     cmake --preset 'JetPack 5' \
         && cmake --build --parallel --preset 'JetPack 5' \
         && cmake --install build --component CUDA --strip --parallel 8
@@ -80,7 +80,7 @@ RUN apt-get update && apt-get install -y curl ccache \
     && curl -fsSL https://github.com/Kitware/CMake/releases/download/v${CMAKEVERSION}/cmake-${CMAKEVERSION}-linux-$(uname -m).tar.gz | tar xz -C /usr/local --strip-components 1
 COPY CMakeLists.txt CMakePresets.json .
 COPY ml/backend/ggml/ggml ml/backend/ggml/ggml
-RUN --mount=type=cache,target=/root/.ccache \
+RUN --mount=type=cache,id=ccache-jetpack6,target=/root/.ccache \
     cmake --preset 'JetPack 6' \
         && cmake --build --parallel --preset 'JetPack 6' \
         && cmake --install build --component CUDA --strip --parallel 8
@@ -94,7 +94,7 @@ RUN go mod download
 COPY . .
 ARG GOFLAGS="'-ldflags=-w -s'"
 ENV CGO_ENABLED=1
-RUN --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=cache,id=go-build-cache,target=/root/.cache/go-build \
     go build -trimpath -buildmode=pie -o /bin/ollama .
 
 FROM --platform=linux/amd64 scratch AS amd64
